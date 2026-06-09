@@ -17,7 +17,8 @@ export default async function handler(req, res) {
 
     const prompt = `You are a plant care expert. Give me a concise care guide for "${plantName}".
 
-Respond ONLY with a JSON object — no markdown, no backticks, no preamble:
+You MUST respond with only a raw JSON object. No markdown, no code fences, no backticks, no explanation before or after. Start your response with { and end with }.
+
 {
   "commonName": "string",
   "scientificName": "string",
@@ -37,17 +38,41 @@ Respond ONLY with a JSON object — no markdown, no backticks, no preamble:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1000 }
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1000,
+            responseMimeType: 'application/json'
+          }
         })
       }
     )
 
     const data = await geminiRes.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    const clean = text.replace(/```json|```/g, '').trim()
-    const parsed = JSON.parse(clean)
+
+    if (!geminiRes.ok) {
+      return res.status(geminiRes.status).json({ error: data.error?.message || 'Gemini error' })
+    }
+
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+    // Strip any markdown fences Gemini might add despite instructions
+    const clean = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```\s*$/i, '')
+      .trim()
+
+    // Extract JSON object even if there's stray text around it
+    const match = clean.match(/\{[\s\S]*\}/)
+    if (!match) {
+      console.error('Gemini raw response:', raw)
+      return res.status(500).json({ error: 'Could not parse plant data' })
+    }
+
+    const parsed = JSON.parse(match[0])
     return res.status(200).json(parsed)
   } catch (err) {
+    console.error('Research error:', err)
     return res.status(500).json({ error: err.message })
   }
 }
