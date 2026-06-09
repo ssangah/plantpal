@@ -1,17 +1,12 @@
-const PLANTNET_API_KEY = process.env.REACT_APP_PLANTNET_API_KEY
-
-// Identify a plant from a base64 image using PlantNet free API
+// Identify a plant from an image file via PlantNet
 export async function identifyPlant(imageFile) {
-  if (!PLANTNET_API_KEY) {
-    throw new Error('PLANTNET_API_KEY not set')
-  }
-
+  const apiKey = process.env.REACT_APP_PLANTNET_API_KEY
   const formData = new FormData()
   formData.append('images', imageFile)
   formData.append('organs', 'leaf')
 
   const res = await fetch(
-    `https://my-api.plantnet.org/v2/identify/all?api-key=${PLANTNET_API_KEY}&lang=en&nb-results=3`,
+    `https://api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=en&nb-results=3`,
     { method: 'POST', body: formData }
   )
 
@@ -19,7 +14,7 @@ export async function identifyPlant(imageFile) {
   const data = await res.json()
 
   if (!data.results || data.results.length === 0) {
-    throw new Error('No plants identified')
+    throw new Error('No plants identified — try a clearer photo of a leaf')
   }
 
   return data.results.map(r => ({
@@ -30,39 +25,18 @@ export async function identifyPlant(imageFile) {
   }))
 }
 
-// Use Claude AI to research a plant and suggest a watering schedule
+// Research a plant via Gemini (server-side proxy keeps API key secret)
 export async function researchPlant(plantName) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
+  const res = await fetch('/api/research', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{
-        role: 'user',
-        content: `You are a plant care expert. Give me a concise care guide for "${plantName}".
-        
-Respond ONLY with a JSON object — no markdown, no backticks, no preamble:
-{
-  "commonName": "string",
-  "scientificName": "string", 
-  "wateringFrequencyDays": number,
-  "wateringTip": "one sentence tip on when/how to water",
-  "light": "Full sun / Indirect light / Low light",
-  "humidity": "Low / Medium / High",
-  "difficulty": "Easy / Moderate / Expert",
-  "quickTips": ["tip1", "tip2", "tip3"],
-  "commonProblems": ["problem1", "problem2"]
-}`
-      }]
-    })
+    body: JSON.stringify({ plantName })
   })
 
-  const data = await res.json()
-  const text = data.content?.[0]?.text || ''
-  try {
-    return JSON.parse(text.replace(/```json|```/g, '').trim())
-  } catch {
-    throw new Error('Could not parse plant research')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Error: ${res.status}`)
   }
+
+  return res.json()
 }
