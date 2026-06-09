@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { styles } from '../App'
+import NotificationSettings from './NotificationSettings'
 
 export default function Settings({ userName, onBack, onSetName, onRefresh, showToast }) {
   const [nameInput, setNameInput] = useState(userName)
@@ -35,6 +36,8 @@ export default function Settings({ userName, onBack, onSetName, onRefresh, showT
             </button>
           </div>
         </div>
+
+        <NotificationSettings showToast={showToast} />
 
         <div style={card}>
           <div style={{ fontWeight: 600, fontSize: 14, color: '#1a3d28', marginBottom: 6 }}>🤝 Share with a friend</div>

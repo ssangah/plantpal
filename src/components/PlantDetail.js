@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { styles } from '../App'
+import PlantResearch from './PlantResearch'
 
 const statusColors = {
   urgent: { bar: '#e05c3a', bg: '#fdf0ec', text: '#c04020' },
@@ -38,6 +40,7 @@ function ProgressRing({ pct, color, size = 64 }) {
 }
 
 export default function PlantDetail({ plant, status, onBack, onWater, onDelete }) {
+  const [showResearch, setShowResearch] = useState(false)
   const sc = statusColors[status.level]
 
   return (
@@ -61,9 +64,16 @@ export default function PlantDetail({ plant, status, onBack, onWater, onDelete }
           </div>
         </div>
 
-        <button onClick={onWater} style={{ ...styles.primaryBtn, marginBottom: 24 }}>
-          💧 Water Now
-        </button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+          <button onClick={onWater} style={{ ...styles.primaryBtn, flex: 1 }}>
+            💧 Water Now
+          </button>
+          <button onClick={() => setShowResearch(true)}
+            style={{ padding: '14px 16px', borderRadius: 14, background: '#edf5f0', color: '#2d5e3e', border: '1.5px solid #b5d0bc', cursor: 'pointer', fontSize: 18 }}
+            title="AI plant research">
+            🔍
+          </button>
+        </div>
 
         <h3 style={{ fontSize: 14, color: '#4a7c59', fontWeight: 600, marginBottom: 12 }}>Watering History</h3>
 
@@ -84,6 +94,10 @@ export default function PlantDetail({ plant, status, onBack, onWater, onDelete }
           </div>
         ))}
       </div>
+
+      {showResearch && (
+        <PlantResearch plantName={plant.name} onClose={() => setShowResearch(false)} />
+      )}
     </div>
   )
 }

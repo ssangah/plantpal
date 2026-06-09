@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { styles } from '../App'
+import PlantIdentifier from './PlantIdentifier'
+import { researchPlant } from '../plantApi'
 
 const COLORS = ['#4a7c59','#7b9e6b','#c17f3e','#8b6b3d','#5b8a6f','#a05c2e','#3d6b4f','#9e7b4a']
 const EMOJIS = ['🌿','🪴','🌱','🌵','🌺','🍃','🌻','🌸','🎋','🍀','🌴','🪷']
@@ -7,6 +9,25 @@ const EMOJIS = ['🌿','🪴','🌱','🌵','🌺','🍃','🌻','🌸','🎋','
 export default function AddPlant({ onBack, onSave }) {
   const [form, setForm] = useState({ name: '', emoji: '🌿', frequencyDays: 7, color: COLORS[0], notes: '' })
   const [saving, setSaving] = useState(false)
+  const [showIdentifier, setShowIdentifier] = useState(false)
+  const [researching, setResearching] = useState(false)
+
+  async function handleIdentified(match) {
+    setShowIdentifier(false)
+    setForm(f => ({ ...f, name: match.commonName }))
+    // Auto-research the identified plant
+    setResearching(true)
+    try {
+      const data = await researchPlant(match.commonName)
+      setForm(f => ({
+        ...f,
+        name: data.commonName || match.commonName,
+        frequencyDays: data.wateringFrequencyDays || f.frequencyDays,
+        notes: data.wateringTip || f.notes
+      }))
+    } catch {}
+    setResearching(false)
+  }
 
   async function handleSave() {
     if (!form.name.trim()) return
@@ -23,6 +44,19 @@ export default function AddPlant({ onBack, onSave }) {
       </div>
 
       <div style={{ padding: '16px' }}>
+
+        {/* Identify from photo */}
+        <button onClick={() => setShowIdentifier(true)}
+          style={{ width: '100%', padding: '12px', borderRadius: 12, background: '#edf5f0', color: '#2d5e3e', border: '1.5px dashed #7b9e6b', cursor: 'pointer', fontWeight: 600, fontSize: 14, marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          📷 Identify from a photo instead
+        </button>
+
+        {researching && (
+          <div style={{ background: '#edf5f0', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#2d5e3e', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>🔍</span> Looking up care schedule…
+          </div>
+        )}
+
         <label style={styles.label}>Plant name</label>
         <input value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}
           placeholder="e.g. Peace Lily"
@@ -58,11 +92,18 @@ export default function AddPlant({ onBack, onSave }) {
           placeholder="Care tips, location…" rows={3}
           style={{ ...styles.input, resize: 'none', lineHeight: 1.5 }} />
 
-        <button onClick={handleSave} disabled={!form.name.trim() || saving}
-          style={{ ...styles.primaryBtn, opacity: form.name.trim() ? 1 : 0.5 }}>
+        <button onClick={handleSave} disabled={!form.name.trim() || saving || researching}
+          style={{ ...styles.primaryBtn, opacity: form.name.trim() && !researching ? 1 : 0.5 }}>
           {saving ? 'Saving…' : 'Save Plant 🌱'}
         </button>
       </div>
+
+      {showIdentifier && (
+        <PlantIdentifier
+          onIdentified={handleIdentified}
+          onClose={() => setShowIdentifier(false)}
+        />
+      )}
     </div>
   )
 }

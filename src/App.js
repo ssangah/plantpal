@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabaseClient'
+import { registerServiceWorker, startReminderChecker } from './notifications'
 import PlantCard from './components/PlantCard'
 import AddPlant from './components/AddPlant'
 import PlantDetail from './components/PlantDetail'
@@ -14,6 +15,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
+  const reminderCleanupRef = useRef(null)
 
   function showToast(msg) {
     setToast(msg)
@@ -38,8 +40,8 @@ export default function App() {
 
   useEffect(() => {
     fetchPlants()
+    registerServiceWorker()
 
-    // Real-time subscription — updates instantly when friend waters a plant
     const channel = supabase
       .channel('plantpal-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'plants' }, fetchPlants)
@@ -48,6 +50,14 @@ export default function App() {
 
     return () => supabase.removeChannel(channel)
   }, [fetchPlants])
+
+  // Start reminder checker whenever plants update
+  useEffect(() => {
+    if (plants.length === 0) return
+    if (reminderCleanupRef.current) reminderCleanupRef.current()
+    reminderCleanupRef.current = startReminderChecker(plants, getStatus, null)
+    return () => { if (reminderCleanupRef.current) reminderCleanupRef.current() }
+  }, [plants]) // eslint-disable-line
 
   async function handleWater(plantId) {
     const { error } = await supabase.from('waterings').insert({
