@@ -14,8 +14,12 @@ export default function NotificationSettings({ showToast }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    setSupported(isNotificationsSupported())
-    setPermission(Notification.permission || 'default')
+    // Safely check support — Notification may not exist on some browsers
+    const isSupported = isNotificationsSupported()
+    setSupported(isSupported)
+    if (isSupported && typeof Notification !== 'undefined') {
+      setPermission(Notification.permission || 'default')
+    }
     checkSubscription()
   }, [])
 
@@ -29,24 +33,30 @@ export default function NotificationSettings({ showToast }) {
 
   async function handleEnable() {
     setLoading(true)
-    const perm = await requestNotificationPermission()
-    setPermission(perm)
-    if (perm === 'granted') {
-      await subscribeToPush()
-      setSubscribed(true)
-      await sendLocalNotification('Plant Pal 🌿', 'Notifications enabled! We\'ll remind you when plants need watering.')
-      showToast('Notifications enabled!')
-    } else {
-      showToast('Permission denied — check your browser settings')
+    try {
+      const perm = await requestNotificationPermission()
+      setPermission(perm)
+      if (perm === 'granted') {
+        await subscribeToPush()
+        setSubscribed(true)
+        await sendLocalNotification('Plant Pal 🌿', 'Notifications enabled! We\'ll remind you when plants need watering.')
+        showToast('Notifications enabled!')
+      } else {
+        showToast('Permission denied — check your browser settings')
+      }
+    } catch (e) {
+      showToast('Could not enable notifications')
     }
     setLoading(false)
   }
 
   async function handleDisable() {
     setLoading(true)
-    await unsubscribeFromPush()
-    setSubscribed(false)
-    showToast('Notifications disabled')
+    try {
+      await unsubscribeFromPush()
+      setSubscribed(false)
+      showToast('Notifications disabled')
+    } catch {}
     setLoading(false)
   }
 
@@ -54,7 +64,7 @@ export default function NotificationSettings({ showToast }) {
     <div style={card}>
       <div style={title}>🔔 Push Notifications</div>
       <p style={desc}>
-        Not supported in this browser. On iPhone, use Safari and add the app to your Home Screen first.
+        Not supported in this browser. On iPhone, open in Safari and add to your Home Screen first, then enable notifications.
       </p>
     </div>
   )
@@ -70,11 +80,11 @@ export default function NotificationSettings({ showToast }) {
         }}>{subscribed ? 'On' : 'Off'}</span>
       </div>
       <p style={desc}>
-        Get notified when plants are overdue for watering. Checks every 4 hours while the app is open.
+        Get notified when plants are overdue for watering.
       </p>
       {permission === 'denied' ? (
         <p style={{ fontSize: 12, color: '#c04020', marginTop: 8 }}>
-          Notifications are blocked. Go to your browser settings to re-enable them.
+          Notifications are blocked. Go to Settings → Safari → your site to re-enable.
         </p>
       ) : subscribed ? (
         <button onClick={handleDisable} disabled={loading}
@@ -90,15 +100,7 @@ export default function NotificationSettings({ showToast }) {
   )
 }
 
-const card = {
-  background: '#fff', borderRadius: 14,
-  border: '1.5px solid #e8ede9', padding: '16px', marginBottom: 14
-}
+const card = { background: '#fff', borderRadius: 14, border: '1.5px solid #e8ede9', padding: '16px', marginBottom: 14 }
 const title = { fontWeight: 600, fontSize: 14, color: '#1a3d28', marginBottom: 4 }
 const desc = { fontSize: 13, color: '#6b8c72', lineHeight: 1.5 }
-const btn = {
-  marginTop: 12, width: '100%', padding: '11px',
-  borderRadius: 10, background: '#edf5f0', color: '#2d5e3e',
-  border: '1.5px solid #b5d0bc', cursor: 'pointer',
-  fontWeight: 600, fontSize: 14
-}
+const btn = { marginTop: 12, width: '100%', padding: '11px', borderRadius: 10, background: '#edf5f0', color: '#2d5e3e', border: '1.5px solid #b5d0bc', cursor: 'pointer', fontWeight: 600, fontSize: 14 }
