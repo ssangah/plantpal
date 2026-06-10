@@ -1,18 +1,20 @@
-// Identify a plant from an image file via PlantNet
+// Identify a plant — routes through /api/identify to avoid CORS issues
 export async function identifyPlant(imageFile) {
-  const apiKey = process.env.REACT_APP_PLANTNET_API_KEY
   const formData = new FormData()
   formData.append('images', imageFile)
   formData.append('organs', 'leaf')
 
-  const res = await fetch(
-    `https://api.plantnet.org/v2/identify/all?api-key=${apiKey}&lang=en&nb-results=3`,
-    { method: 'POST', body: formData }
-  )
+  const res = await fetch('/api/identify', {
+    method: 'POST',
+    body: formData
+  })
 
-  if (!res.ok) throw new Error(`PlantNet error: ${res.status}`)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || `Error: ${res.status}`)
+  }
+
   const data = await res.json()
-
   if (!data.results || data.results.length === 0) {
     throw new Error('No plants identified — try a clearer photo of a leaf')
   }
