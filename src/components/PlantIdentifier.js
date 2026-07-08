@@ -2,14 +2,16 @@ import { useState, useRef } from 'react'
 import { identifyPlant } from '../plantApi'
 
 export default function PlantIdentifier({ onIdentified, onClose }) {
-  const [stage, setStage] = useState('upload') // upload | identifying | results | error
+  const [stage, setStage] = useState('upload')
   const [results, setResults] = useState([])
   const [preview, setPreview] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
   const [error, setError] = useState(null)
   const fileRef = useRef()
 
   async function handleFile(file) {
     if (!file) return
+    setImageFile(file)
     setPreview(URL.createObjectURL(file))
     setStage('identifying')
     try {
@@ -23,7 +25,8 @@ export default function PlantIdentifier({ onIdentified, onClose }) {
   }
 
   function handleSelect(match) {
-    onIdentified(match)
+    // Pass both the match and the actual image file so the parent can upload it
+    onIdentified(match, imageFile)
   }
 
   return (
@@ -47,23 +50,18 @@ export default function PlantIdentifier({ onIdentified, onClose }) {
         </div>
 
         <div style={{ padding: '16px' }}>
-
           {stage === 'upload' && (
             <div>
               <p style={{ fontSize: 13, color: '#6b8c72', marginBottom: 16, lineHeight: 1.5 }}>
-                Take or upload a photo of a plant leaf — we'll identify it and suggest a watering schedule.
+                Take or upload a photo — we'll identify it and use the photo as the plant's thumbnail.
               </p>
               <input ref={fileRef} type="file" accept="image/*" capture="environment"
                 style={{ display: 'none' }}
                 onChange={e => handleFile(e.target.files[0])} />
               <button onClick={() => { fileRef.current.setAttribute('capture', 'environment'); fileRef.current.click() }}
-                style={primaryBtn}>
-                📷 Take a Photo
-              </button>
+                style={primaryBtn}>📷 Take a Photo</button>
               <button onClick={() => { fileRef.current.removeAttribute('capture'); fileRef.current.click() }}
-                style={{ ...secondaryBtn, marginTop: 10 }}>
-                🖼 Choose from Library
-              </button>
+                style={{ ...secondaryBtn, marginTop: 10 }}>🖼 Choose from Library</button>
               <p style={{ fontSize: 11, color: '#8aaa90', textAlign: 'center', marginTop: 12 }}>
                 Powered by PlantNet · Best results with a clear leaf photo
               </p>
@@ -83,7 +81,7 @@ export default function PlantIdentifier({ onIdentified, onClose }) {
                 {preview && <img src={preview} alt="Plant" style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />}
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#1a3d28' }}>Top matches</div>
-                  <div style={{ fontSize: 11, color: '#8aaa90' }}>Tap one to use it</div>
+                  <div style={{ fontSize: 11, color: '#8aaa90' }}>Tap one — your photo becomes its thumbnail</div>
                 </div>
               </div>
               {results.map((r, i) => (
@@ -115,21 +113,11 @@ export default function PlantIdentifier({ onIdentified, onClose }) {
               <button onClick={() => setStage('upload')} style={primaryBtn}>Try again</button>
             </div>
           )}
-
         </div>
       </div>
     </div>
   )
 }
 
-const primaryBtn = {
-  width: '100%', padding: '13px', borderRadius: 12,
-  background: '#4a7c59', color: '#fff', border: 'none',
-  fontSize: 15, fontWeight: 600, cursor: 'pointer'
-}
-const secondaryBtn = {
-  width: '100%', padding: '12px', borderRadius: 12,
-  background: '#edf5f0', color: '#2d5e3e',
-  border: '1.5px solid #b5d0bc', fontSize: 14,
-  fontWeight: 600, cursor: 'pointer'
-}
+const primaryBtn = { width: '100%', padding: '13px', borderRadius: 12, background: '#4a7c59', color: '#fff', border: 'none', fontSize: 15, fontWeight: 600, cursor: 'pointer' }
+const secondaryBtn = { width: '100%', padding: '12px', borderRadius: 12, background: '#edf5f0', color: '#2d5e3e', border: '1.5px solid #b5d0bc', fontSize: 14, fontWeight: 600, cursor: 'pointer' }

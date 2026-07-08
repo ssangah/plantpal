@@ -75,7 +75,8 @@ export default function App() {
       emoji: form.emoji,
       frequency_days: form.frequencyDays,
       color: form.color,
-      notes: form.notes
+      notes: form.notes,
+      photo_url: form.photoUrl || null
     })
     if (!error) { showToast('🌱 Plant added!'); fetchPlants(); setView('home') }
     else showToast('Error adding plant')
@@ -153,7 +154,8 @@ export default function App() {
         <PlantDetail plant={selected} status={getStatus(selected)}
           onBack={() => setView('home')}
           onWater={() => handleWater(selected.id)}
-          onDelete={() => handleDeletePlant(selected.id)} />
+          onDelete={() => handleDeletePlant(selected.id)}
+          onRefresh={fetchPlants} />
       )}
 
       {view === 'add' && (
