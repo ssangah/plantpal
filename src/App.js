@@ -25,13 +25,15 @@ export default function App() {
   const fetchPlants = useCallback(async () => {
     const { data, error } = await supabase
       .from('plants')
-      .select('*, waterings(id, watered_at, watered_by)')
+      .select('*, waterings(id, watered_at, watered_by), fertilizings(id, fertilized_at, fertilized_by)')
       .order('name')
     if (!error && data) {
       const normalized = data.map(p => ({
         ...p,
         logs: (p.waterings || [])
-          .sort((a, b) => new Date(b.watered_at) - new Date(a.watered_at))
+          .sort((a, b) => new Date(b.watered_at) - new Date(a.watered_at)),
+        fertilizeLogs: (p.fertilizings || [])
+          .sort((a, b) => new Date(b.fertilized_at) - new Date(a.fertilized_at))
       }))
       setPlants(normalized)
     }
@@ -46,12 +48,12 @@ export default function App() {
       .channel('plantpal-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'plants' }, fetchPlants)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'waterings' }, fetchPlants)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'fertilizings' }, fetchPlants)
       .subscribe()
 
     return () => supabase.removeChannel(channel)
   }, [fetchPlants])
 
-  // Start reminder checker whenever plants update
   useEffect(() => {
     if (plants.length === 0) return
     if (reminderCleanupRef.current) reminderCleanupRef.current()
@@ -69,11 +71,22 @@ export default function App() {
     else showToast('Error saving — check connection')
   }
 
+  async function handleFertilize(plantId) {
+    const { error } = await supabase.from('fertilizings').insert({
+      plant_id: plantId,
+      fertilized_by: userName || 'Someone',
+      fertilized_at: new Date().toISOString()
+    })
+    if (!error) { showToast('🌿 Fertilized!'); fetchPlants() }
+    else showToast('Error saving — check connection')
+  }
+
   async function handleAddPlant(form) {
     const { error } = await supabase.from('plants').insert({
       name: form.name,
       emoji: form.emoji,
       frequency_days: form.frequencyDays,
+      fertilize_frequency_days: form.fertilizeFrequencyDays || 30,
       color: form.color,
       notes: form.notes,
       photo_url: form.photoUrl || null
@@ -84,6 +97,7 @@ export default function App() {
 
   async function handleDeletePlant(id) {
     await supabase.from('waterings').delete().eq('plant_id', id)
+    await supabase.from('fertilizings').delete().eq('plant_id', id)
     await supabase.from('plants').delete().eq('id', id)
     showToast('Plant removed')
     fetchPlants()
@@ -101,10 +115,19 @@ export default function App() {
     if (!last) return { label: 'Never watered', level: 'urgent', pct: 100 }
     const days = Math.floor((Date.now() - new Date(last.watered_at)) / 86400000)
     const pct = Math.min(100, Math.round((days / plant.frequency_days) * 100))
-    /* *Steph- commented oout 8/16/26*if (days >= plant.frequency_days) return { label: `${days}d overdue`, level: 'urgent', pct: 100 } */
     if (days >= plant.frequency_days) return { label: `${days - plant.frequency_days}d overdue`, level: 'urgent', pct: 100 }
     if (days >= plant.frequency_days * 0.75) return { label: 'Due soon', level: 'soon', pct }
     return { label: `${plant.frequency_days - days}d left`, level: 'ok', pct }
+  }
+
+  function getFertilizeStatus(plant) {
+    const last = plant.fertilizeLogs?.[0]
+    const freqDays = plant.fertilize_frequency_days || 30
+    if (!last) return { label: 'Never fertilized', level: 'urgent' }
+    const days = Math.floor((Date.now() - new Date(last.fertilized_at)) / 86400000)
+    if (days >= freqDays) return { label: `${days - freqDays}d overdue`, level: 'urgent' }
+    if (days >= freqDays * 0.75) return { label: 'Due soon', level: 'soon' }
+    return { label: `${freqDays - days}d left`, level: 'ok' }
   }
 
   const sorted = [...plants].sort((a, b) => {
@@ -140,6 +163,7 @@ export default function App() {
             {sorted.map(plant => (
               <PlantCard key={plant.id} plant={plant} status={getStatus(plant)}
                 onWater={() => handleWater(plant.id)}
+                onFertilize={() => handleFertilize(plant.id)}
                 onSelect={() => { setSelectedId(plant.id); setView('detail') }} />
             ))}
           </div>
@@ -153,8 +177,10 @@ export default function App() {
 
       {view === 'detail' && selected && (
         <PlantDetail plant={selected} status={getStatus(selected)}
+          fertilizeStatus={getFertilizeStatus(selected)}
           onBack={() => setView('home')}
           onWater={() => handleWater(selected.id)}
+          onFertilize={() => handleFertilize(selected.id)}
           onDelete={() => handleDeletePlant(selected.id)}
           onRefresh={fetchPlants} />
       )}
