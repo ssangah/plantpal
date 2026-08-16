@@ -89,7 +89,7 @@ export default function App() {
       fertilize_frequency_days: form.fertilizeFrequencyDays || 30,
       color: form.color,
       notes: form.notes,
-      photo_url: form.photoUrl || null
+      photo_url: form.photoPath || null
     })
     if (!error) { showToast('🌱 Plant added!'); fetchPlants(); setView('home') }
     else showToast('Error adding plant')
