@@ -101,7 +101,8 @@ export default function App() {
     if (!last) return { label: 'Never watered', level: 'urgent', pct: 100 }
     const days = Math.floor((Date.now() - new Date(last.watered_at)) / 86400000)
     const pct = Math.min(100, Math.round((days / plant.frequency_days) * 100))
-    if (days >= plant.frequency_days) return { label: `${days}d overdue`, level: 'urgent', pct: 100 }
+    /* *Steph- commented oout 8/16/26*if (days >= plant.frequency_days) return { label: `${days}d overdue`, level: 'urgent', pct: 100 } */
+    if (days >= plant.frequency_days) return { label: `${days - plant.frequency_days}d overdue`, level: 'urgent', pct: 100 }
     if (days >= plant.frequency_days * 0.75) return { label: 'Due soon', level: 'soon', pct }
     return { label: `${plant.frequency_days - days}d left`, level: 'ok', pct }
   }
