@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getSignedUrl } from '../photoStorage'
 
 const statusColors = {
   urgent: { bar: '#e05c3a', bg: '#fdf0ec', text: '#c04020' },
@@ -21,9 +22,16 @@ function getDaysSince(iso) {
 export default function PlantCard({ plant, status, onWater, onFertilize, onSelect }) {
   const [justWatered, setJustWatered] = useState(false)
   const [justFertilized, setJustFertilized] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState(null)
   const sc = statusColors[status.level]
   const lastLog = plant.logs?.[0]
   const lastFertilize = plant.fertilizeLogs?.[0]
+
+  useEffect(() => {
+    if (plant.photo_url) {
+      getSignedUrl(plant.photo_url).then(setPhotoUrl)
+    }
+  }, [plant.photo_url])
 
   function handleWater(e) {
     e.stopPropagation()
@@ -42,10 +50,9 @@ export default function PlantCard({ plant, status, onWater, onFertilize, onSelec
   return (
     <div onClick={onSelect} style={{ background: '#fff', borderRadius: 14, border: `1.5px solid ${justWatered || justFertilized ? '#4a7c59' : '#e8ede9'}`, padding: '12px 14px', marginBottom: 10, cursor: 'pointer', transition: 'border-color 0.3s', display: 'flex', alignItems: 'center', gap: 12 }}>
 
-      {/* Thumbnail */}
       <div style={{ width: 44, height: 44, borderRadius: 12, overflow: 'hidden', flexShrink: 0, background: plant.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {plant.photo_url
-          ? <img src={plant.photo_url} alt={plant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {photoUrl
+          ? <img src={photoUrl} alt={plant.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <span style={{ fontSize: 24 }}>{plant.emoji}</span>
         }
       </div>
@@ -68,15 +75,12 @@ export default function PlantCard({ plant, status, onWater, onFertilize, onSelec
         </div>
       </div>
 
-      {/* Action buttons */}
       <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-        <button onClick={handleFertilize}
-          title="Mark as fertilized"
+        <button onClick={handleFertilize} title="Mark as fertilized"
           style={{ width: 36, height: 36, borderRadius: 10, background: justFertilized ? '#7b9e6b' : '#f4f7ee', border: '1px solid #c8d8b0', cursor: 'pointer', fontSize: 16, transition: 'background 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           🌿
         </button>
-        <button onClick={handleWater}
-          title="Mark as watered"
+        <button onClick={handleWater} title="Mark as watered"
           style={{ width: 36, height: 36, borderRadius: 10, background: justWatered ? '#4a7c59' : '#edf5f0', border: 'none', cursor: 'pointer', fontSize: 18, transition: 'background 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           💧
         </button>

@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 const BUCKET = 'plant-photos'
 
 export async function uploadPhoto(file) {
-  const ext = file.name.split('.').pop() || 'jpg'
+  const ext = file.name?.split('.').pop() || 'jpg'
   const path = `plants/${Date.now()}.${ext}`
 
   const { error } = await supabase.storage
@@ -12,14 +12,14 @@ export async function uploadPhoto(file) {
 
   if (error) throw error
 
-  // Return the storage path — signed URLs are generated when displaying
+  // Return the path — we generate signed URLs when displaying
   return path
 }
 
 // Generate a signed URL valid for 1 year
 export async function getSignedUrl(path) {
   if (!path) return null
-  // Legacy: already a full URL
+  // Already a full URL (legacy data) — return as-is
   if (path.startsWith('http')) return path
 
   const { data, error } = await supabase.storage
