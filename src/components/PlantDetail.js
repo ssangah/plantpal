@@ -103,7 +103,7 @@ export default function PlantDetail({ plant, status, onBack, onWater, onDelete, 
           <button onClick={() => { if (window.confirm(`Remove ${plant.name}?`)) onDelete() }}
             style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗑</button>
         </div>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment"
+        <input ref={fileRef} type="file" accept="image/*"      
           style={{ display: 'none' }}
           onChange={e => handlePhotoChange(e.target.files[0])} />
       </div>
