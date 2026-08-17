@@ -36,6 +36,26 @@ function ProgressRing({ pct, color, size = 64 }) {
   )
 }
 
+// Added for debug
+
+async function handlePhotoChange(file) {
+  if (!file) return
+  setPhotoPreview(URL.createObjectURL(file))
+  setUploading(true)
+  try {
+    const path = await uploadPhoto(file)
+    console.log('Uploaded path:', path)
+    const { data, error } = await supabase.from('plants').update({ photo_url: path }).eq('id', plant.id)
+    console.log('Update result:', data, error)
+    if (onRefresh) onRefresh()
+  } catch (e) {
+    console.error('Photo update failed:', e)
+  }
+  setUploading(false)
+}
+
+// Added for debug
+
 export default function PlantDetail({ plant, status, onBack, onWater, onDelete, onRefresh }) {
   const [showResearch, setShowResearch] = useState(false)
   const [photoPreview, setPhotoPreview] = useState(null)
